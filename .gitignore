@@ -4,3 +4,7 @@ tools/
 docs/
 resources/
 *.pyc
+experiments/
+misc/
+results/
+outputs/
