@@ -1,0 +1,6 @@
+.virtualenv/
+tmp/
+tools/
+docs/
+resources/
+*.pyc
