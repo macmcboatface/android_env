@@ -1,0 +1,5 @@
+#!/bin/bash
+source ./env.sh
+source ../env.sh
+source ../../env.sh
+jarsigner "$1" -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore "$RELEASE_KEYSTORE" "$KEYSTORE_ALIAS" -signedjar $2
