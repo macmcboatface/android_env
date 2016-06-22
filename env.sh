@@ -2,8 +2,8 @@
 echo "setting a few enviroment variables..."
 
 
-#export ENV_ROOT=`pwd` 
-export ENV_ROOT=/home/mac/Desktop/env
+export ENV_ROOT="/home/$USER/android_env" 
+
 echo "ENV_ROOT=$ENV_ROOT"
 
 export ANDROID_NDK_HOME=$ENV_ROOT/tools/toolchains/ndks/android-ndk-r10e

@@ -5,14 +5,10 @@ import sys
 import time
 from frida_scripts.traffic.injector.traffic_sniffer_injector import TrafficSnifferInjector
 
-def main(package):
+def main(package, base_port, outputs_dir):
     try:
-        port = int(sys.argv[1])
-        print "using base port : %d" % port
-        outputs_dir = os.path.join("outputs", package)
-
         injector = TrafficSnifferInjector(package)
-        sniffers = traffic.create_sniffers(port, outputs_dir)
+        sniffers = traffic.create_sniffers(base_port, outputs_dir)
 
         for sniffer in sniffers:
             injector.inject(sniffer)
@@ -20,4 +16,3 @@ def main(package):
 
     except KeyboardInterrupt as e:
         sys.exit(0)
-
