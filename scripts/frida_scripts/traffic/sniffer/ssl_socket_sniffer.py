@@ -6,8 +6,9 @@ import base_sniffer
 import frida_scripts.traffic.loader.tcp_traffic_loader as tcp_traffic_loader
 import frida_scripts.traffic.unloader.tcp_traffic_unloader as tcp_traffic_unloader
 import frida_scripts.traffic.sink.sink_file as sink_file
+import frida_scripts.traffic.sink.sink_dir as sink_dir
 
-Sink = sink_file.FileSink
+Sink = sink_dir.DirSink
 TrafficLoader = tcp_traffic_loader.TrafficLoaderTCP
 TrafficUnloader = tcp_traffic_unloader.TrafficUnloaderTCP
 
@@ -17,7 +18,7 @@ class SocketInTheMiddle(object):
     def __init__(self, outgoing_loader, incoming_loader):
         self._outgoing_traffic_loader = outgoing_loader
         self._incoming_traffic_loader = incoming_loader
-    
+
     def write(self, data):
         self._outgoing_traffic_loader.load(data)
 
@@ -41,7 +42,7 @@ class SocketInTheMiddle(object):
 
     def renegotiate(self):
         pass
-    
+
     @staticmethod
     def generic_write(data):
         SocketInTheMiddle._generic_outgoing_traffic_loader.load(data)
@@ -57,7 +58,7 @@ class SocketInTheMiddle(object):
     @staticmethod
     def generic_new(*args, **kwargs):
         pass
-    
+
     @staticmethod
     def generic_free(*args, **kwargs):
         pass
@@ -80,7 +81,7 @@ class SocketInTheMiddle(object):
         SocketInTheMiddle._generic_outgoing_traffic_loader = _generic_outgoing_traffic_loader
         SocketInTheMiddle._generic_incoming_traffic_loader = _generic_incoming_traffic_loader
 
-class SocketSniffer(base_sniffer.Sniffer):   
+class SocketSniffer(base_sniffer.Sniffer):
     def __init__(self, loaders, unloaders):
         super(SocketSniffer, self).__init__(loaders, unloaders)
         self._outgoing_traffic_loader = self._loaders[0]
@@ -97,8 +98,8 @@ Interceptor.attach(Module.findExportByName(null, "SSL_write"), {
         this.sslNativePointer = args[0]
         this.fd = args[1];
         this.SSLHandshakeCallbacks = args[2]
-        this.buff = args[3];       
-        this.offset = args[4];       
+        this.buff = args[3];
+        this.offset = args[4];
         this.byteCount = args[5];
         this.writeTimeoutMs = args[6];
 
@@ -122,7 +123,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_write"), {
             msg["sslNativePointer"] = this.sslNativePointer
             msg["origin"] = "SSL_write"
             buff = Memory.readByteArray(ptr(this.buff.toInt32()+this.offset.toInt32()), retval.toInt32())
-            send(msg, buff);    
+            send(msg, buff);
         }
     }
 });
@@ -135,11 +136,11 @@ Interceptor.attach(Module.findExportByName(null, "SSL_read"), {
         this.sslNativePointer = args[0]
         this.fd = args[1];
         this.SSLHandshakeCallbacks = args[2]
-        this.buff = args[3];       
-        this.offset = args[4];       
+        this.buff = args[3];
+        this.offset = args[4];
         this.byteCount = args[5];
         this.writeTimeoutMs = args[6];
-        
+
 
         this.buff = args[1];
         this.byteCount = args[2];
@@ -164,7 +165,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_read"), {
             buff = Memory.readByteArray(ptr(this.buff.toInt32()+this.offset.toInt32()), retval.toInt32())
             send(msg, buff);
         }
-        
+
     }
 });
 """
@@ -178,10 +179,10 @@ Interceptor.attach(Module.findExportByName(null, "SSL_new"), {
         msg["type"] = "meta"
         msg["sslNativePointer"] = retval
         msg["origin"] = "SSL_new"
-        send(msg);        
+        send(msg);
     }
 });
-"""    
+"""
     SSL_FREE_SCRIPT = """
 Interceptor.attach(Module.findExportByName(null, "SSL_free"), {
     onEnter: function(args) {
@@ -198,7 +199,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_free"), {
         send(msg);
     }
 });
-"""    
+"""
     SSL_DO_HANDSHAKE_SCRIPT = """
 Interceptor.attach(Module.findExportByName(null, "SSL_do_handshake"), {
     onEnter: function(args) {
@@ -212,7 +213,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_do_handshake"), {
         send(msg);
     }
 });
-""" 
+"""
     SSL_SET_FD_SCRIPT = """
 Interceptor.attach(Module.findExportByName(null, "SSL_set_fd"), {
     onEnter: function(args) {
@@ -226,7 +227,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_set_fd"), {
         send(msg);
     }
 });
-""" 
+"""
     SSL_SHUTDOWN_SCRIPT = """
 Interceptor.attach(Module.findExportByName(null, "SSL_shutdown"), {
     onEnter: function(args) {
@@ -240,7 +241,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_shutdown"), {
         send(msg);
     }
 });
-""" 
+"""
     SSL_RENEGOTIATE_SCRIPT = """
 Interceptor.attach(Module.findExportByName(null, "SSL_renegotiate"), {
     onEnter: function(args) {
@@ -254,7 +255,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_renegotiate"), {
         send(msg);
     }
 });
-""" 
+"""
     def new(self, sslNativePointer):
         if str(sslNativePointer) not in self.sockets:
             outgoing_loader = self._outgoing_traffic_loader.create_subloader("sock.%s.%s" % (self.counter, sslNativePointer))
@@ -264,7 +265,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_renegotiate"), {
             self.counter += 1
         else:
             self.sockets[str(sslNativePointer)].generic_new()
-    
+
     def free(self, sslNativePointer):
         if str(sslNativePointer) in self.sockets:
             self.sockets[str(sslNativePointer)].free()
@@ -323,7 +324,7 @@ Interceptor.attach(Module.findExportByName(null, "SSL_renegotiate"), {
                         elif msg["origin"] == "SSL_write":
                             self.write(msg["sslNativePointer"], data)
                     else:
-                        print(message)        
+                        print(message)
                 elif msg["type"] == "meta":
                     if  msg["origin"] == "SSL_new":
                         self.new(msg["sslNativePointer"])
