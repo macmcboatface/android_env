@@ -1,83 +1,139 @@
 #!/bin/bash
 source ./env.sh
-if [ "$1" == "install" ]
-	then
-		echo "install required packages"
-		sudo apt-get install autogen
-		sudo apt-get install autoconf
-		#sudo apt-get install node
-		#sudo apt-get install npm
-		#sudo apt-get install python3-pip
-		#sudo pip3 install colorama prompt-toolkit pygments
-		#npm install frida
-		sudo ln -s /usr/bin/nodejs /usr/bin/node
-		sudo apt-get install build-essential curl git python-setuptools ruby
-		sudo apt-get install build-essential git cmake libqt4-dev libphonon-dev python2.7-dev libxml2-dev libxslt1-dev qtmobility-dev libqtwebkit-dev
-		sudo apt-get install autoconf automake libtool curl make g++ unzip
-		sudo apt-get install build-essential libtool
+ANDROID_NDK_DOWNLOAD_PATH="http://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip"
+ANDROID_SDK_DOWNLOAD_PATH="https://dl.google.com/android/android-sdk_r24.4.1-linux.tgz"
+JDK_DOWNLOAD_PATH="http://download.oracle.com/otn-pub/java/jdk/8u91-b14/jdk-8u91-linux-x64.tar.gz"
 
-		echo "installing virtualenv"
-		sudo pip install virtualenv
-		sudo pip install virtualenv --upgrade
+SMALI_DOWNLOAD_PATH="https://bitbucket.org/JesusFreke/smali/downloads/smali-2.1.2.jar"
+BAKSMALI_DOWNLOAD_PATH="https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.1.2.jar"
+APKTOOL_DOWNLOAD_PATH="https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.1.1.jar"
 
-		echo "clone git repos"
-		git clone https://github.com/Linuxbrew/brew.git $LINUXBREW_PATH
-		git clone https://github.com/JesusFreke/smali.git $SMALI_PATH
-		git clone https://github.com/skylot/jadx.git $JADX_PATH
-		git clone https://github.com/frida/frida.git $FRIDA_PATH
-		git clone https://github.com/pxb1988/dex2jar.git $DEX2JAR_PATH
-		git clone https://github.com/iBotPeaches/Apktool.git $APKTOOL_PATH
-		git clone https://github.com/PySide/pyside-setup.git $PYSIDE_SETUP_PATH
-		git clone https://github.com/google/protobuf.git $PROTOBUF_PATH
-		git clone https://github.com/sysdream/Protod.git $PROTOD_PATH
-		git clone https://github.com/devttys0/binwalk.git $BINWALK_PATH
-		git clone https://github.com/128technology/protobuf_dissector.git $PROTOBUF_DISSECTOR_PATH
+function install_core_packages {
+	echo "[+] Installing core packages"
+	sudo apt-get install autogen 
+	sudo apt-get install autoconf
+	sudo apt-get install build-essential curl git python-setuptools ruby
+	sudo apt-get install build-essential git cmake libqt4-dev libphonon-dev python2.7-dev libxml2-dev libxslt1-dev qtmobility-dev libqtwebkit-dev python-lzma
+	sudo apt-get install autoconf automake libtool curl make g++ unzip
+	sudo apt-get install build-essential libtool
+	sudo apt-get install openjdk-8-jdk
+	sudo ln -s /usr/bin/nodejs /usr/bin/node
+}
 
-		echo "setup virtual env"
-		virtualenv $ENV_PYTHON_VIRTUALENV
-fi
+function setup_python_env {
+	echo "[+] Setting python env"
+	echo "[+] Installing virtualenv"
+	sudo pip install virtualenv
+	sudo pip install virtualenv --upgrade
 
-source $ENV_PYTHON_VIRTUALENV/bin/activate
+	echo "[+] Setup virtual env"
+	virtualenv $ENV_PYTHON_VIRTUALENV
+	source $ENV_PYTHON_VIRTUALENV/bin/activate
+	pip install protobuf
+	pip install protobuf --upgrade
+	pip install ipython	
+}
 
-if [ "$1" == "install" ]
-	then
-		echo "installing pip packages"
-		pip install frida
-		pip install frida --upgrade
-		pip install protobuf
-		pip install protobuf --upgrade
-		
-	
-		echo "installing binwalk"
-		PWD=`pwd`
-		cd $BINWALK_PATH
-		python setup install
-		cd $PWD
+function install_toolchains {
+	echo "[+] Install toolchain"
+	if [ ! -d "$ANDROID_NDK_HOME" ]; then
+		echo "[+] Setting Android NDK"
+		ANDROID_NDK_ZIP=$(basename $ANDROID_NDK_DOWNLOAD_PATH)
+		mkdir -p $TOOLCHAINS/ndks
+		cd $TOOLCHAINS/ndks
+		wget $ANDROID_NDK_DOWNLOAD_PATH 
+		unzip $ANDROID_NDK_ZIP
+		rm $ANDROID_NDK_ZIP
+	fi
 
-		#echo "building pyside for lobotomy"
-		#PWD=`pwd`
-		#cd $PYSIDE_SETUP_PATH
-		#python setup.py bdist_wheel --qmake=/usr/bin/qmake-qt4 --version=1.2.4
-		#pip install dist/PySide-1.2.4-cp27-none-linux-x86_64.whl
-		#cd $PWD
+	if [ ! -d "$ANDROID_SDK_HOME" ]; then
+		echo "[+] Setting Android SDK"
+		ANDROID_SDK_ZIP=$(basename $ANDROID_SDK_DOWNLOAD_PATH)
+		mkdir -p $TOOLCHAINS/sdks
+		cd $TOOLCHAINS/sdks
+		wget $ANDROID_SDK_DOWNLOAD_PATH 
+		tar xzf $ANDROID_SDK_ZIP
+		rm $ANDROID_SDK_ZIP
+	fi 
+}
 
-		#echo "building dex2jar tools"
-		#PWD=`pwd`
-		#cd $DEX2JAR_PATH
-		#./gradlew build
-		#cd $PWD
-		#ln -s $DEX2JAR_PATH/dex-tools/build/generated-sources/bin/d2j-apk-sign.sh $TOOLS_ROOT/d2j-apk-sign.sh
-		#ln -s $DEX2JAR_PATH/dex-tools/build/libs $ $TOOLS_ROOT
-		
-		$SCRIPTS_ROOT/setup/keystore.sh
-		
-fi
+function download_and_install_jar_tool {
+	TOOLNAME="$1"
+	DOWNLOAD_PATH="$2"
+	BIN_NAME=$(basename $DOWNLOAD_PATH)
+	TOOL_PATH="$TOOLS/$TOOLNAME"	
+	mkdir -p $TOOL_PATH/bin
+	cd $TOOL_PATH/bin
+	if [ ! -f "$BIN_NAME" ] 
+	then 
+		echo "[+] Installing $TOOLNAME"
+		wget $DOWNLOAD_PATH
+		ln -s "$TOOL_PATH/bin/$BIN_NAME" "$TOOL_PATH/$TOOLNAME.jar"
+		ln -s "$JAR_EXEC" "$TOOLS/bin/$TOOLNAME"
+	fi
+}
 
-#echo "pulling git updates"
-#PWD=`pwd`
-#cd $SMALI_PATH;git pull
-#cd $JADX_PATH;git pull
-#cd $FRIDA_PATH;git pull
-#cd $DEX2JAR_PATH;git pull
-#cd $PWD
+function clone_or_pull {
+	REMOTE_PATH="$1"
+	LOCAL_PATH="$2"
+	if [ -d "$LOCAL_PATH" ] 
+	then 
+		cd "$LOCAL_PATH"
+		git pull
+	else
+		git clone "$REMOTE_PATH" "$LOCAL_PATH"
+		cd "$LOCAL_PATH"
+	fi
+}
 
+function install_python_from_source {
+	TOOLNAME="$1"
+	GIT_REMOTE_PATH="$2"
+	TOOL_PATH="$TOOLS/$TOOLNAME"
+	SOURCE_PATH="$TOOL_PATH/source"
+	clone_or_pull "$GIT_REMOTE_PATH" "$SOURCE_PATH"
+	python setup.py install
+}
+
+function install_jadx {
+	SOURCE_PATH="$TOOLS/jadx/source"
+	clone_or_pull "https://github.com/skylot/jadx.git" "$SOURCE_PATH"
+	cd $SOURCE_PATH
+	./gradlew dist
+	ln -s "$SOURCE_PATH/build/jadx/bin/jadx" "$TOOLS/bin/jadx"
+	ln -s "$SOURCE_PATH/build/jadx/bin/jadx-gui" "$TOOLS/bin/jadx-gui"
+}
+
+function install_enjarify {
+	SOURCE_PATH="$TOOLS/enjarify/source"	
+	clone_or_pull "https://github.com/google/enjarify.git" "$SOURCE_PATH"
+	mkdir -p "$TOOLS/enjarify/bin"
+	ln -s "$SOURCE_PATH/enjarify.sh" "$TOOLS/bin/enjarify"
+}
+
+function install_tools {
+	echo "[+] Installing tools"
+	download_and_install_jar_tool smali "$SMALI_DOWNLOAD_PATH"
+	download_and_install_jar_tool baksmali "$BAKSMALI_DOWNLOAD_PATH"
+	download_and_install_jar_tool apktool "$APKTOOL_DOWNLOAD_PATH"
+	install_python_from_source binwalk "https://github.com/devttys0/binwalk.git"
+	pip install frida --upgrade 
+	install_jadx
+	install_enjarify
+}
+
+function prepare_paths {
+	mkdir -p "$TOOLS/bin"
+	mkdir -p "$SCRIPTS"
+	mkdir -p "$TOOLCHAINS"
+}
+
+function install_all {
+	CURRENT_DIR=$(pwd)
+	prepare_paths
+	install_core_packages
+	setup_python_env		
+	install_toolchains
+	install_tools
+	cd $CURRENT_DIR
+}
