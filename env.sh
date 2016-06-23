@@ -26,8 +26,6 @@ export PATH=$PATH:$SMALI_SCRIPTS
 export PATH=$PATH:$MISC_SCRIPTS_PATH
 
 # echo "setting up aliases for external tools"
-# export APKTOOL_JAR_PATH=$TOOLS/binaries/apktool.jar
-# alias apktool="java -jar $APKTOOL_JAR_PATH"
 
 export TETHERING_SCRIPT_PATH=$SCRIPTS/setup/tether.sh
 alias tether="$TETHERING_SCRIPT_PATH"
@@ -35,6 +33,11 @@ export PROXIFYING_SCRIPT_PATH=$SCRIPTS/setup/proxy.sh
 alias proxify="$PROXIFYING_SCRIPT_PATH"
 
 export ENV_PYTHON_VIRTUALENV=$ENV_ROOT/.virtualenv
+
+alias ash='adb shell'
+alias alog='adb logcat -v threadtime'
+alias alogc='adb logcat -c'
+alias aglog='alog | grep'
 
 # export RELEASE_KEYSTORE=$ENV_ROOT/resources/my-release-key.keystore
 # export KEYSTORE_ALIAS="my-key-alias"
